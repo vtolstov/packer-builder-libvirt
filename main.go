@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/mitchellh/packer/packer/plugin"
-	"github.com/vtolstov/packer-builder-lxc/builder/lxc"
+	"github.com/vtolstov/packer-builder-libvirt/builder/libvirt"
 )
 
 func main() {
@@ -10,6 +10,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	server.RegisterBuilder(new(lxc.Builder))
+	server.RegisterBuilder(new(libvirt.Builder))
 	server.Serve()
 }
