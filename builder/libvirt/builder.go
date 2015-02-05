@@ -51,6 +51,8 @@ type config struct {
 	VMName          string   `mapstructure:"vm_name"`
 	XMLTemplatePath string   `mapstructure:"xml_template_path"`
 
+	URI string `mapstructure:"uri"`
+
 	RawBootWait        string `mapstructure:"boot_wait"`
 	RawSingleISOUrl    string `mapstructure:"iso_url"`
 	RawShutdownTimeout string `mapstructure:"shutdown_timeout"`
