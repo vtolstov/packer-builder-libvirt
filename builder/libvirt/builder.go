@@ -286,7 +286,7 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, error) {
 			errs, errors.New("ssh_host_port_min must be less than ssh_host_port_max"))
 	}
 
-	if b.config.SSHUser == "" {
+	if b.config.SSHUser == "" && !strings.HasPrefix(b.config.URI, "lxc") {
 		errs = packer.MultiErrorAppend(
 			errs, errors.New("An ssh_username must be specified."))
 	}
