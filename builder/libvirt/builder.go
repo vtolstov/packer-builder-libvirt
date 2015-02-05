@@ -23,6 +23,11 @@ type Builder struct {
 	runner multistep.Runner
 }
 
+type Domain struct {
+	Arch string `mapstructure:"arch"`
+	Init string `mapstructure:"init"`
+}
+
 type config struct {
 	common.PackerConfig `mapstructure:",squash"`
 
@@ -52,6 +57,8 @@ type config struct {
 	XMLTemplatePath string   `mapstructure:"xml_template_path"`
 
 	URI string `mapstructure:"uri"`
+
+	Domain Domain `mapstructure:"domain"`
 
 	RawBootWait        string `mapstructure:"boot_wait"`
 	RawSingleISOUrl    string `mapstructure:"iso_url"`
