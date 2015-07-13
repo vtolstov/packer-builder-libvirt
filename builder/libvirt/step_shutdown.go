@@ -3,10 +3,12 @@ package libvirt
 import (
 	"errors"
 	"fmt"
-	"github.com/mitchellh/multistep"
-	"github.com/mitchellh/packer/packer"
 	"log"
 	"time"
+
+	"github.com/mitchellh/multistep"
+	"github.com/mitchellh/packer/packer"
+	"gopkg.in/alexzorin/libvirt-go.v2"
 )
 
 // This step shuts down the machine. It first attempts to do so gracefully,
@@ -23,9 +25,9 @@ type stepShutdown struct{}
 
 func (s *stepShutdown) Run(state multistep.StateBag) multistep.StepAction {
 	comm := state.Get("communicator").(packer.Communicator)
-	config := state.Get("config").(*config)
+	config := state.Get("config").(*Config)
 	ui := state.Get("ui").(packer.Ui)
-
+	var lvd libvirt.VirDomain
 	if config.ShutdownCommand != "" {
 		ui.Say("Gracefully halting virtual machine...")
 		log.Printf("Executing shutdown command: %s", config.ShutdownCommand)
@@ -41,10 +43,10 @@ func (s *stepShutdown) Run(state multistep.StateBag) multistep.StepAction {
 		log.Printf("Waiting max %s for shutdown to complete", config.shutdownTimeout)
 		shutdownTimer := time.After(config.shutdownTimeout)
 		for {
-			running, _ := isRunning(config.VMName)
-			if !running {
-				break
-			}
+			//			running, _ := isRunning(config.VMName)
+			//			if !running {
+			//				break
+			//			}
 
 			select {
 			case <-shutdownTimer:
@@ -58,11 +60,36 @@ func (s *stepShutdown) Run(state multistep.StateBag) multistep.StepAction {
 		}
 	} else {
 		ui.Say("Halting the virtual machine...")
-		if _, _, err := virsh("destroy", config.VMName); err != nil {
-			err := fmt.Errorf("Error stopping VM: %s", err)
+		lv, err := libvirt.NewVirConnection(config.LibvirtUrl)
+		if err != nil {
+			err := fmt.Errorf("Error connecting to libvirt: %s", err)
 			state.Put("error", err)
 			ui.Error(err.Error())
 			return multistep.ActionHalt
+		}
+		defer lv.CloseConnection()
+		if lvd, err = lv.LookupDomainByName(config.VMName); err != nil {
+			err := fmt.Errorf("Error creating domain: %s", err)
+			state.Put("error", err)
+			ui.Error(err.Error())
+			return multistep.ActionHalt
+		}
+		defer lvd.Free()
+		if ok, err := lvd.IsActive(); ok && err == nil {
+			if err = lvd.Destroy(); err != nil {
+				err := fmt.Errorf("Error shut down domain: %s", err)
+				state.Put("error", err)
+				ui.Error(err.Error())
+				return multistep.ActionHalt
+
+			}
+		}
+		if err = lvd.Undefine(); err != nil {
+			err := fmt.Errorf("Error undefine domain: %s", err)
+			state.Put("error", err)
+			ui.Error(err.Error())
+			return multistep.ActionHalt
+
 		}
 	}
 

@@ -1,17 +1,18 @@
 package libvirt
 
 import (
-	"github.com/mitchellh/multistep"
-	"github.com/mitchellh/packer/packer"
 	"log"
 	"os"
 	"time"
+
+	"github.com/mitchellh/multistep"
+	"github.com/mitchellh/packer/packer"
 )
 
 type stepPrepareOutputDir struct{}
 
 func (stepPrepareOutputDir) Run(state multistep.StateBag) multistep.StepAction {
-	config := state.Get("config").(*config)
+	config := state.Get("config").(*Config)
 	ui := state.Get("ui").(packer.Ui)
 
 	if _, err := os.Stat(config.OutputDir); err == nil && config.PackerForce {
@@ -32,7 +33,7 @@ func (stepPrepareOutputDir) Cleanup(state multistep.StateBag) {
 	_, halted := state.GetOk(multistep.StateHalted)
 
 	if cancelled || halted {
-		config := state.Get("config").(*config)
+		config := state.Get("config").(*Config)
 		ui := state.Get("ui").(packer.Ui)
 
 		ui.Say("Deleting output directory...")

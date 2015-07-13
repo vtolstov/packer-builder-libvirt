@@ -3,7 +3,6 @@ package libvirt
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -13,94 +12,95 @@ import (
 	"github.com/mitchellh/multistep"
 	"github.com/mitchellh/packer/common"
 	commonssh "github.com/mitchellh/packer/common/ssh"
+	"github.com/mitchellh/packer/helper/communicator"
+	"github.com/mitchellh/packer/helper/config"
 	"github.com/mitchellh/packer/packer"
+	"github.com/mitchellh/packer/template/interpolate"
 )
 
-const BuilderId = "qur.libvirt"
+const BuilderId = "vtolstov.libvirt"
 
 type Builder struct {
-	config config
+	config Config
 	runner multistep.Runner
 }
 
-type Domain struct {
-	Arch string `mapstructure:"arch"`
-	Init string `mapstructure:"init"`
-}
-
-type config struct {
+type Config struct {
 	common.PackerConfig `mapstructure:",squash"`
+	Comm                communicator.Config `mapstructure:",squash"`
+	DomainType          string              `mapstructure:"domain_type"`
+	BootCommand         []string            `mapstructure:"boot_command"`
+	MemorySize          uint                `mapstructure:"memory_size"`
+	Arch                string              `mapstructure:"arch"`
+	DiskName            string              `mapstructure:"disk_name"`
+	DiskType            string              `mapstructure:"disk_type"`
+	DiskSize            uint                `mapstructure:"disk_size"`
+	FloppyFiles         []string            `mapstructure:"floppy_files"`
+	HTTPDir             string              `mapstructure:"http_directory"`
+	HTTPPortMin         uint                `mapstructure:"http_port_min"`
+	HTTPPortMax         uint                `mapstructure:"http_port_max"`
+	ISOUrl              string              `mapstructure:"iso_url"`
+	OutputDir           string              `mapstructure:"output_directory"`
+	ShutdownCommand     string              `mapstructure:"shutdown_command"`
+	SSHHostPortMin      uint                `mapstructure:"ssh_host_port_min"`
+	SSHHostPortMax      uint                `mapstructure:"ssh_host_port_max"`
+	SSHKeyPath          string              `mapstructure:"ssh_key_path"`
+	SSHPassword         string              `mapstructure:"ssh_password"`
+	SSHPort             uint                `mapstructure:"ssh_port"`
+	SSHUser             string              `mapstructure:"ssh_username"`
+	VMName              string              `mapstructure:"vm_name"`
 
-	BootCommand     []string `mapstructure:"boot_command"`
-	MemSize         uint     `mapstructure:"mem_size"`
-	DomainType      string   `mapstructure:"domain_type"`
-	DiskName        string   `mapstructure:"disk_name"`
-	DiskType        string   `mapstructure:"disk_type"`
-	DiskSize        uint     `mapstructure:"disk_size"`
-	FloppyFiles     []string `mapstructure:"floppy_files"`
-	Headless        bool     `mapstructure:"headless"`
-	HTTPDir         string   `mapstructure:"http_directory"`
-	HTTPPortMin     uint     `mapstructure:"http_port_min"`
-	HTTPPortMax     uint     `mapstructure:"http_port_max"`
-	ISOChecksum     string   `mapstructure:"iso_checksum"`
-	ISOChecksumType string   `mapstructure:"iso_checksum_type"`
-	ISOUrls         []string `mapstructure:"iso_urls"`
-	OutputDir       string   `mapstructure:"output_directory"`
-	ShutdownCommand string   `mapstructure:"shutdown_command"`
-	SSHHostPortMin  uint     `mapstructure:"ssh_host_port_min"`
-	SSHHostPortMax  uint     `mapstructure:"ssh_host_port_max"`
-	SSHKeyPath      string   `mapstructure:"ssh_key_path"`
-	SSHPassword     string   `mapstructure:"ssh_password"`
-	SSHPort         uint     `mapstructure:"ssh_port"`
-	SSHUser         string   `mapstructure:"ssh_username"`
-	VMName          string   `mapstructure:"vm_name"`
-	XMLTemplatePath string   `mapstructure:"xml_template_path"`
+	DomainXml   string `mapstructure:"domain_xml"`
+	VolumeXml   string `mapstructure:"volume_xml"`
+	PoolName    string `mapstructure:"pool_name"`
+	PoolXml     string `mapstructure:"pool_xml"`
+	NetworkName string `mapstructure:"network_name"`
+	NetworkXml  string `mapstructure:"network_xml"`
 
-	URI string `mapstructure:"uri"`
-
-	Domain Domain `mapstructure:"domain"`
+	LibvirtUrl string `mapstructure:"libvirt_urls"`
 
 	RawBootWait        string `mapstructure:"boot_wait"`
-	RawSingleISOUrl    string `mapstructure:"iso_url"`
 	RawShutdownTimeout string `mapstructure:"shutdown_timeout"`
 	RawSSHWaitTimeout  string `mapstructure:"ssh_wait_timeout"`
 
 	bootWait        time.Duration ``
 	shutdownTimeout time.Duration ``
 	sshWaitTimeout  time.Duration ``
-	tpl             *packer.ConfigTemplate
+	ctx             interpolate.Context
 }
 
 func (b *Builder) Prepare(raws ...interface{}) ([]string, error) {
-	md, err := common.DecodeConfig(&b.config, raws...)
-	if err != nil {
-		return nil, err
-	}
-
-	b.config.tpl, err = packer.NewConfigTemplate()
-	if err != nil {
-		return nil, err
-	}
-	b.config.tpl.UserVars = b.config.PackerUserVars
-
-	// Accumulate any errors
-	errs := common.CheckUnusedConfig(md)
+	var errs *packer.MultiError
 	warnings := make([]string, 0)
+
+	err := config.Decode(&b.config, &config.DecodeOpts{
+		Interpolate:        true,
+		InterpolateContext: &b.config.ctx,
+		InterpolateFilter: &interpolate.RenderFilter{
+			Exclude: []string{
+				"boot_command",
+				"qemuargs",
+			},
+		},
+	}, raws...)
+	if err != nil {
+		return nil, err
+	}
 
 	if b.config.DomainType == "" {
 		b.config.DomainType = "kvm"
 	}
 
 	if b.config.DiskType == "" {
-		b.config.DiskType = "qcow2"
+		b.config.DiskType = "raw"
 	}
 
 	if b.config.DiskName == "" {
-		b.config.DiskName = "disk"
+		b.config.DiskName = b.config.PackerBuildName
 	}
 
 	if b.config.DiskSize == 0 {
-		b.config.DiskSize = 40000
+		b.config.DiskSize = 5000
 	}
 
 	if b.config.FloppyFiles == nil {
@@ -138,109 +138,36 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, error) {
 	if b.config.VMName == "" {
 		b.config.VMName = fmt.Sprintf("packer-%s", b.config.PackerBuildName)
 	}
-
-	// Errors
-	templates := map[string]*string{
-		"disk_name":         &b.config.DiskName,
-		"http_directory":    &b.config.HTTPDir,
-		"iso_checksum":      &b.config.ISOChecksum,
-		"iso_checksum_type": &b.config.ISOChecksumType,
-		"iso_url":           &b.config.RawSingleISOUrl,
-		"output_directory":  &b.config.OutputDir,
-		"shutdown_command":  &b.config.ShutdownCommand,
-		"ssh_password":      &b.config.SSHPassword,
-		"ssh_username":      &b.config.SSHUser,
-		"vm_name":           &b.config.VMName,
-		"boot_wait":         &b.config.RawBootWait,
-		"shutdown_timeout":  &b.config.RawShutdownTimeout,
-		"ssh_wait_timeout":  &b.config.RawSSHWaitTimeout,
-		"xml_template_path": &b.config.XMLTemplatePath,
-	}
-
-	for n, ptr := range templates {
-		var err error
-		*ptr, err = b.config.tpl.Process(*ptr, nil)
-		if err != nil {
-			errs = packer.MultiErrorAppend(
-				errs, fmt.Errorf("Error processing %s: %s", n, err))
+	/*
+		// Errors
+		templates := map[string]*string{
+			"disk_name":        &b.config.DiskName,
+			"http_directory":   &b.config.HTTPDir,
+			"output_directory": &b.config.OutputDir,
+			"shutdown_command": &b.config.ShutdownCommand,
+			"ssh_password":     &b.config.SSHPassword,
+			"ssh_username":     &b.config.SSHUser,
+			"vm_name":          &b.config.VMName,
+			"boot_wait":        &b.config.RawBootWait,
+			"shutdown_timeout": &b.config.RawShutdownTimeout,
+			"ssh_wait_timeout": &b.config.RawSSHWaitTimeout,
+			"domain_xml":       &b.config.DomainXml,
+			"volume_xml":       &b.config.VolumeXml,
+			"pool_name":        &b.config.PoolName,
+			"pool_xml":         &b.config.PoolXml,
+			"network_name":     &b.config.NetworkName,
+			"network_xml":      &b.config.NetworkXml,
 		}
-	}
-
-	for i, url := range b.config.ISOUrls {
-		var err error
-		b.config.ISOUrls[i], err = b.config.tpl.Process(url, nil)
-		if err != nil {
-			errs = packer.MultiErrorAppend(
-				errs, fmt.Errorf("Error processing iso_urls[%d]: %s", i, err))
-		}
-	}
-
-	validates := map[string]*string{}
-
-	for n, ptr := range validates {
-		if err := b.config.tpl.Validate(*ptr); err != nil {
-			errs = packer.MultiErrorAppend(
-				errs, fmt.Errorf("Error parsing %s: %s", n, err))
-		}
-	}
-
-	for i, command := range b.config.BootCommand {
-		if err := b.config.tpl.Validate(command); err != nil {
-			errs = packer.MultiErrorAppend(errs,
-				fmt.Errorf("Error processing boot_command[%d]: %s", i, err))
-		}
-	}
-
-	for i, file := range b.config.FloppyFiles {
-		var err error
-		b.config.FloppyFiles[i], err = b.config.tpl.Process(file, nil)
-		if err != nil {
-			errs = packer.MultiErrorAppend(errs,
-				fmt.Errorf("Error processing floppy_files[%d]: %s",
-					i, err))
-		}
+	*/
+	b.config.ISOUrl, err = common.DownloadableURL(b.config.ISOUrl)
+	if err != nil {
+		errs = packer.MultiErrorAppend(
+			errs, fmt.Errorf("Failed to parse iso_url: %s", err))
 	}
 
 	if b.config.HTTPPortMin > b.config.HTTPPortMax {
 		errs = packer.MultiErrorAppend(
 			errs, errors.New("http_port_min must be less than http_port_max"))
-	}
-
-	if b.config.ISOChecksum == "" {
-		errs = packer.MultiErrorAppend(
-			errs, errors.New("Due to large file sizes, an iso_checksum is required"))
-	} else {
-		b.config.ISOChecksum = strings.ToLower(b.config.ISOChecksum)
-	}
-
-	if b.config.ISOChecksumType == "" {
-		errs = packer.MultiErrorAppend(
-			errs, errors.New("The iso_checksum_type must be specified."))
-	} else {
-		b.config.ISOChecksumType = strings.ToLower(b.config.ISOChecksumType)
-		if h := common.HashForType(b.config.ISOChecksumType); h == nil {
-			errs = packer.MultiErrorAppend(
-				errs,
-				fmt.Errorf("Unsupported checksum type: %s", b.config.ISOChecksumType))
-		}
-	}
-
-	if b.config.RawSingleISOUrl == "" && len(b.config.ISOUrls) == 0 {
-		errs = packer.MultiErrorAppend(
-			errs, errors.New("One of iso_url or iso_urls must be specified."))
-	} else if b.config.RawSingleISOUrl != "" && len(b.config.ISOUrls) > 0 {
-		errs = packer.MultiErrorAppend(
-			errs, errors.New("Only one of iso_url or iso_urls may be specified."))
-	} else if b.config.RawSingleISOUrl != "" {
-		b.config.ISOUrls = []string{b.config.RawSingleISOUrl}
-	}
-
-	for i, url := range b.config.ISOUrls {
-		b.config.ISOUrls[i], err = common.DownloadableURL(url)
-		if err != nil {
-			errs = packer.MultiErrorAppend(
-				errs, fmt.Errorf("Failed to parse iso_url %d: %s", i+1, err))
-		}
 	}
 
 	if !b.config.PackerForce {
@@ -286,7 +213,7 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, error) {
 			errs, errors.New("ssh_host_port_min must be less than ssh_host_port_max"))
 	}
 
-	if b.config.SSHUser == "" && !strings.HasPrefix(b.config.URI, "lxc") {
+	if b.config.SSHUser == "" && !strings.HasPrefix(b.config.LibvirtUrl, "lxc") {
 		errs = packer.MultiErrorAppend(
 			errs, errors.New("An ssh_username must be specified."))
 	}
@@ -295,14 +222,6 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, error) {
 	if err != nil {
 		errs = packer.MultiErrorAppend(
 			errs, fmt.Errorf("Failed parsing ssh_wait_timeout: %s", err))
-	}
-
-	if b.config.XMLTemplatePath != "" {
-		if err := b.validateXMLTemplatePath(); err != nil {
-			errs = packer.MultiErrorAppend(
-				errs, fmt.Errorf("xml_template_path is invalid: %s", err))
-		}
-
 	}
 
 	// Warnings
@@ -321,40 +240,35 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, error) {
 
 func (b *Builder) Run(ui packer.Ui, hook packer.Hook, cache packer.Cache) (packer.Artifact, error) {
 	// Check we have the required tools
-	err := findTools()
-	if err != nil {
-		return nil, fmt.Errorf("Failed to find required tools: %s", err)
-	}
 
 	steps := []multistep.Step{
-		&common.StepDownload{
-			Checksum:     b.config.ISOChecksum,
-			ChecksumType: b.config.ISOChecksumType,
-			Description:  "ISO",
-			ResultKey:    "iso_path",
-			Url:          b.config.ISOUrls,
-		},
 		new(stepPrepareOutputDir),
 		&common.StepCreateFloppy{
 			Files: b.config.FloppyFiles,
 		},
 		new(stepHTTPServer),
-		new(stepCreateDisk),
-		new(stepCreateXML),
+		new(stepCreatePool),
 		new(stepCreateNetwork),
+		new(stepCreateVolume),
+		new(stepCreateDomain),
 		new(stepRun),
 		new(stepTypeBootCommand),
-		&common.StepConnectSSH{
-			SSHAddress:     sshAddress,
-			SSHConfig:      sshConfig,
-			SSHWaitTimeout: b.config.sshWaitTimeout,
+		&communicator.StepConnect{
+			Config:    &b.config.Comm,
+			Host:      commHost,
+			SSHConfig: sshConfig,
+			SSHPort:   commPort,
 		},
 		// can we upload any guest helpers?
 		new(common.StepProvision),
 		new(stepShutdown),
 		// compact disk?
 	}
+	/*
+	   ▶       ▶       new(stepDownloadVolume),
+	   ▶       ▶       new(stepDeleteVolume),
 
+	*/
 	// Setup the state bag
 	state := &multistep.BasicStateBag{}
 	state.Put("cache", cache)
@@ -421,19 +335,4 @@ func (b *Builder) Cancel() {
 		log.Println("Cancelling the step runner...")
 		b.runner.Cancel()
 	}
-}
-
-func (b *Builder) validateXMLTemplatePath() error {
-	f, err := os.Open(b.config.XMLTemplatePath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	data, err := ioutil.ReadAll(f)
-	if err != nil {
-		return err
-	}
-
-	return b.config.tpl.Validate(string(data))
 }

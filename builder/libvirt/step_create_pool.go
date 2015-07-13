@@ -8,12 +8,12 @@ import (
 	"gopkg.in/alexzorin/libvirt-go.v2"
 )
 
-type stepCreateNetwork struct{}
+type stepCreatePool struct{}
 
-func (stepCreateNetwork) Run(state multistep.StateBag) multistep.StepAction {
+func (stepCreatePool) Run(state multistep.StateBag) multistep.StepAction {
 	config := state.Get("config").(*Config)
 	ui := state.Get("ui").(packer.Ui)
-	var lvn libvirt.VirNetwork
+	var lvp libvirt.VirStoragePool
 	lv, err := libvirt.NewVirConnection(config.LibvirtUrl)
 	if err != nil {
 		err := fmt.Errorf("Error connecting to libvirt: %s", err)
@@ -22,18 +22,25 @@ func (stepCreateNetwork) Run(state multistep.StateBag) multistep.StepAction {
 		return multistep.ActionHalt
 	}
 	defer lv.CloseConnection()
-	if lvn, err = lv.LookupNetworkByName(config.NetworkName); err != nil {
-		lvn, err = lv.NetworkDefineXML(config.NetworkXml)
+	if lvp, err = lv.LookupStoragePoolByName(config.PoolName); err != nil {
+		lvp, err = lv.StoragePoolDefineXML(config.PoolXml, 0)
 		if err != nil {
-			err := fmt.Errorf("Error defining network: %s", err)
+			err := fmt.Errorf("Error defining pool: %s", err)
 			state.Put("error", err)
 			ui.Error(err.Error())
 			return multistep.ActionHalt
 		}
 	}
-	defer lvn.Free()
-	if ok, err := lvn.IsActive(); !ok && err == nil {
-		err = lvn.Create()
+	defer lvp.Free()
+	if ok, err := lvp.IsActive(); !ok && err == nil {
+		err = lvp.Build(0)
+		if err != nil {
+			err := fmt.Errorf("Error building pool: %s", err)
+			state.Put("error", err)
+			ui.Error(err.Error())
+			return multistep.ActionHalt
+		}
+		err = lvp.Create(0)
 		if err != nil {
 			err := fmt.Errorf("Error creating network: %s", err)
 			state.Put("error", err)
@@ -44,10 +51,10 @@ func (stepCreateNetwork) Run(state multistep.StateBag) multistep.StepAction {
 	return multistep.ActionContinue
 }
 
-func (stepCreateNetwork) Cleanup(state multistep.StateBag) {
+func (stepCreatePool) Cleanup(state multistep.StateBag) {
 	config := state.Get("config").(*Config)
 	ui := state.Get("ui").(packer.Ui)
-
+	var lvp libvirt.VirStoragePool
 	lv, err := libvirt.NewVirConnection(config.LibvirtUrl)
 	if err != nil {
 		err := fmt.Errorf("Error connecting to libvirt: %s", err)
@@ -56,10 +63,10 @@ func (stepCreateNetwork) Cleanup(state multistep.StateBag) {
 		return
 	}
 
-	if lvn, err := lv.LookupNetworkByName(config.NetworkName); err == nil {
-		defer lvn.Free()
-		if ok, err := lvn.IsActive(); !ok && err == nil {
-			err = lvn.Destroy()
+	if lvp, err = lv.LookupStoragePoolByName(config.PoolName); err == nil {
+		defer lvp.Free()
+		if ok, err := lvp.IsActive(); !ok && err == nil {
+			err = lvp.Destroy()
 			if err != nil {
 				ui.Error(fmt.Sprintf("Error destroying network: %s", err))
 			}

@@ -1,17 +1,14 @@
 package libvirt
 
 import (
-	"fmt"
-	"github.com/mitchellh/go-vnc"
-	"github.com/mitchellh/multistep"
-	"github.com/mitchellh/packer/packer"
 	"log"
-	"net"
-	"strconv"
 	"strings"
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/mitchellh/go-vnc"
+	"github.com/mitchellh/multistep"
 )
 
 const KeyLeftShift uint32 = 0xFFE1
@@ -34,81 +31,82 @@ type bootCommandTemplateData struct {
 type stepTypeBootCommand struct{}
 
 func (s *stepTypeBootCommand) Run(state multistep.StateBag) multistep.StepAction {
-	config := state.Get("config").(*config)
-	httpPort := state.Get("http_port").(uint)
-	hostIp := state.Get("host_ip").(string)
-	ui := state.Get("ui").(packer.Ui)
+	/*
+		config := state.Get("config").(*Config)
+		httpPort := state.Get("http_port").(uint)
+		hostIp := state.Get("host_ip").(string)
+		ui := state.Get("ui").(packer.Ui)
 
-	// Get the VNC IP / Port
-	virshOut, _, err := virsh("vncdisplay", config.VMName)
-	vncAddr := strings.TrimSpace(virshOut)
-	colon := strings.LastIndex(vncAddr, ":")
-	if colon < 0 || colon > len(vncAddr)-2 {
-		err := fmt.Errorf("Error parsing VNC address: %s", vncAddr)
-		state.Put("error", err)
-		ui.Error(err.Error())
-		return multistep.ActionHalt
-	}
-	port, err := strconv.ParseUint(vncAddr[colon+1:], 10, 16)
-	if err != nil {
-		err := fmt.Errorf("Error parsing VNC port: %s", err)
-		state.Put("error", err)
-		ui.Error(err.Error())
-		return multistep.ActionHalt
-	}
-	vncAddr = fmt.Sprintf("%s:%d", vncAddr[:colon], 5900+port)
-
-	log.Printf("VNC Address for VM: %s", vncAddr)
-
-	// Connect to VNC
-	ui.Say("Connecting to VM via VNC")
-	nc, err := net.Dial("tcp", vncAddr)
-	if err != nil {
-		err := fmt.Errorf("Error connecting to VNC: %s", err)
-		state.Put("error", err)
-		ui.Error(err.Error())
-		return multistep.ActionHalt
-	}
-	defer nc.Close()
-
-	c, err := vnc.Client(nc, &vnc.ClientConfig{Exclusive: true})
-	if err != nil {
-		err := fmt.Errorf("Error handshaking with VNC: %s", err)
-		state.Put("error", err)
-		ui.Error(err.Error())
-		return multistep.ActionHalt
-	}
-	defer c.Close()
-
-	log.Printf("Connected to VNC desktop: %s", c.DesktopName)
-
-	log.Printf("Host IP for the VM: %s", hostIp)
-
-	tplData := &bootCommandTemplateData{
-		hostIp,
-		httpPort,
-		config.VMName,
-	}
-
-	ui.Say("Typing the boot command over VNC...")
-	for _, command := range config.BootCommand {
-		command, err := config.tpl.Process(command, tplData)
-		if err != nil {
-			err := fmt.Errorf("Error preparing boot command: %s", err)
+		// Get the VNC IP / Port
+		virshOut, _, err := virsh("vncdisplay", config.VMName)
+		vncAddr := strings.TrimSpace(virshOut)
+		colon := strings.LastIndex(vncAddr, ":")
+		if colon < 0 || colon > len(vncAddr)-2 {
+			err := fmt.Errorf("Error parsing VNC address: %s", vncAddr)
 			state.Put("error", err)
 			ui.Error(err.Error())
 			return multistep.ActionHalt
 		}
-
-		// Check for interrupts between typing things so we can cancel
-		// since this isn't the fastest thing.
-		if _, ok := state.GetOk(multistep.StateCancelled); ok {
+		port, err := strconv.ParseUint(vncAddr[colon+1:], 10, 16)
+		if err != nil {
+			err := fmt.Errorf("Error parsing VNC port: %s", err)
+			state.Put("error", err)
+			ui.Error(err.Error())
 			return multistep.ActionHalt
 		}
+		vncAddr = fmt.Sprintf("%s:%d", vncAddr[:colon], 5900+port)
 
-		vncSendString(c, command)
-	}
+		log.Printf("VNC Address for VM: %s", vncAddr)
 
+		// Connect to VNC
+		ui.Say("Connecting to VM via VNC")
+		nc, err := net.Dial("tcp", vncAddr)
+		if err != nil {
+			err := fmt.Errorf("Error connecting to VNC: %s", err)
+			state.Put("error", err)
+			ui.Error(err.Error())
+			return multistep.ActionHalt
+		}
+		defer nc.Close()
+
+		c, err := vnc.Client(nc, &vnc.ClientConfig{Exclusive: true})
+		if err != nil {
+			err := fmt.Errorf("Error handshaking with VNC: %s", err)
+			state.Put("error", err)
+			ui.Error(err.Error())
+			return multistep.ActionHalt
+		}
+		defer c.Close()
+
+		log.Printf("Connected to VNC desktop: %s", c.DesktopName)
+
+		log.Printf("Host IP for the VM: %s", hostIp)
+
+		tplData := &bootCommandTemplateData{
+			hostIp,
+			httpPort,
+			config.VMName,
+		}
+
+		ui.Say("Typing the boot command over VNC...")
+		for _, command := range config.BootCommand {
+			command, err := config.tpl.Process(command, tplData)
+			if err != nil {
+				err := fmt.Errorf("Error preparing boot command: %s", err)
+				state.Put("error", err)
+				ui.Error(err.Error())
+				return multistep.ActionHalt
+			}
+
+			// Check for interrupts between typing things so we can cancel
+			// since this isn't the fastest thing.
+			if _, ok := state.GetOk(multistep.StateCancelled); ok {
+				return multistep.ActionHalt
+			}
+
+			vncSendString(c, command)
+		}
+	*/
 	return multistep.ActionContinue
 }
 

@@ -2,9 +2,11 @@ package libvirt
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/mitchellh/multistep"
 	"github.com/mitchellh/packer/packer"
-	"time"
+	"gopkg.in/alexzorin/libvirt-go.v2"
 )
 
 // This step starts the virtual machine.
@@ -17,26 +19,33 @@ type stepRun struct {
 }
 
 func (s *stepRun) Run(state multistep.StateBag) multistep.StepAction {
-	config := state.Get("config").(*config)
+	config := state.Get("config").(*Config)
 	ui := state.Get("ui").(packer.Ui)
-	xmlPath := state.Get("xml_path").(string)
 
 	ui.Say("Starting the virtual machine...")
-	/*
-	guiArgument := "gui"
-	if config.Headless == true {
-		ui.Message("WARNING: The VM will be started in headless mode, as configured.\n" +
-			"In headless mode, errors during the boot sequence or OS setup\n" +
-			"won't be easily visible. Use at your own discretion.")
-		guiArgument = "headless"
-	}
-	*/
-	if _, _, err := virsh("create", xmlPath); err != nil {
-		err := fmt.Errorf("Error starting VM: %s", err)
+	var lvd libvirt.VirDomain
+	lv, err := libvirt.NewVirConnection(config.LibvirtUrl)
+	if err != nil {
+		err := fmt.Errorf("Error connecting to libvirt: %s", err)
 		state.Put("error", err)
 		ui.Error(err.Error())
 		return multistep.ActionHalt
 	}
+	defer lv.CloseConnection()
+	if lvd, err = lv.LookupDomainByName(config.VMName); err != nil {
+		err := fmt.Errorf("Error creating domain: %s", err)
+		state.Put("error", err)
+		ui.Error(err.Error())
+		return multistep.ActionHalt
+	}
+	if err = lvd.Create(); err != nil {
+		err := fmt.Errorf("Error creating domain: %s", err)
+		state.Put("error", err)
+		ui.Error(err.Error())
+		return multistep.ActionHalt
+	}
+
+	defer lvd.Free()
 
 	s.vmName = config.VMName
 
@@ -49,15 +58,32 @@ func (s *stepRun) Run(state multistep.StateBag) multistep.StepAction {
 }
 
 func (s *stepRun) Cleanup(state multistep.StateBag) {
+	config := state.Get("config").(*Config)
 	if s.vmName == "" {
 		return
 	}
-
+	var lvd libvirt.VirDomain
 	ui := state.Get("ui").(packer.Ui)
 
-	if running, _ := isRunning(s.vmName); running {
-		if _, _, err := virsh("destroy", s.vmName); err != nil {
-			ui.Error(fmt.Sprintf("Error shutting down VM: %s", err))
+	lv, err := libvirt.NewVirConnection(config.LibvirtUrl)
+	if err != nil {
+		ui.Error(fmt.Sprintf("Error connecting to libvirt: %s", err))
+		return
+	}
+	defer lv.CloseConnection()
+	if lvd, err = lv.LookupDomainByName(s.vmName); err != nil {
+		ui.Error(fmt.Sprintf("Error creating domain: %s", err))
+		return
+	}
+	defer lvd.Free()
+	if ok, err := lvd.IsActive(); ok && err == nil {
+		if err = lvd.Destroy(); err != nil {
+			ui.Error(fmt.Sprintf("Error shutting down domain: %s", err))
 		}
 	}
+
+	if err = lvd.Undefine(); err != nil {
+		ui.Error(fmt.Sprintf("Error undefine domain: %s", err))
+	}
+	return
 }

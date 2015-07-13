@@ -2,12 +2,13 @@ package libvirt
 
 import (
 	"fmt"
-	"github.com/mitchellh/multistep"
-	"github.com/mitchellh/packer/packer"
 	"log"
 	"math/rand"
 	"net"
 	"net/http"
+
+	"github.com/mitchellh/multistep"
+	"github.com/mitchellh/packer/packer"
 )
 
 // This step creates and runs the HTTP server that is serving the files
@@ -24,7 +25,7 @@ type stepHTTPServer struct {
 }
 
 func (s *stepHTTPServer) Run(state multistep.StateBag) multistep.StepAction {
-	config := state.Get("config").(*config)
+	config := state.Get("config").(*Config)
 	ui := state.Get("ui").(packer.Ui)
 
 	var httpPort uint = 0
