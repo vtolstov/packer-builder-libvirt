@@ -23,11 +23,11 @@ const PackerNetwork = `
 <network>
   <name>packer</name>
   <forward mode='nat'/>
-  <bridge name='virbr0' stp='on' delay='0'/>
-  <mac address='52:54:00:2e:85:bc'/>
-  <ip address='192.168.122.1' netmask='255.255.255.0'>
+  <bridge name='packer0' stp='on' delay='0'/>
+  <mac address='52:54:00:2e:85:ab'/>
+  <ip address='10.0.2.1' netmask='255.255.255.0'>
     <dhcp>
-      <range start='192.168.122.2' end='192.168.122.254'/>
+      <range start='10.0.2.2' end='10.0.2.254'/>
     </dhcp>
   </ip>
 </network>
