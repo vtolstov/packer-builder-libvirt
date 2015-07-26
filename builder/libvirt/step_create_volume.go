@@ -1,7 +1,9 @@
 package libvirt
 
 import (
+	"bytes"
 	"fmt"
+	"html/template"
 
 	"github.com/mitchellh/multistep"
 	"github.com/mitchellh/packer/packer"
@@ -29,7 +31,30 @@ func (s *stepCreateVolume) Run(state multistep.StateBag) multistep.StepAction {
 		return multistep.ActionHalt
 	}
 
-	if _, err := lvp.StorageVolCreateXML(config.VolumeXml, 0); err != nil {
+	var volumeXml *bytes.Buffer
+	tmpl, err := template.New("volume").Parse(config.VolumeXml)
+	if err != nil {
+		err := fmt.Errorf("Error creating volume: %s", err)
+		state.Put("error", err)
+		ui.Error(err.Error())
+		return multistep.ActionHalt
+	}
+	data := struct {
+		DiskName string
+		DiskSize uint
+	}{
+		config.DiskName,
+		config.DiskSize,
+	}
+	err = tmpl.Execute(volumeXml, data)
+	if err != nil {
+		err := fmt.Errorf("Error creating volume: %s", err)
+		state.Put("error", err)
+		ui.Error(err.Error())
+		return multistep.ActionHalt
+	}
+
+	if _, err := lvp.StorageVolCreateXML(string(volumeXml.Bytes()), 0); err != nil {
 		err := fmt.Errorf("Error creating volume: %s", err)
 		state.Put("error", err)
 		ui.Error(err.Error())
