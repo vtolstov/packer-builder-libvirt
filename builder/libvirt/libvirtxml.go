@@ -1,7 +1,7 @@
 package libvirt
 
 const PackerPool = `
-  <pool type="dir">
+<pool type="dir">
   <name>packer</name>
   <target>
     <path>/var/lib/libvirt/images</path>

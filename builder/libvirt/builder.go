@@ -103,6 +103,30 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, error) {
 		b.config.DiskSize = 5000
 	}
 
+	if b.config.PoolXml == "" {
+		b.config.PoolXml = PackerPool
+	}
+
+	if b.config.PoolName == "" {
+		b.config.PoolName = "packer"
+	}
+
+	if b.config.NetworkName == "" {
+		b.config.NetworkName = "packer"
+	}
+
+	if b.config.VolumeXml == "" {
+		b.config.VolumeXml = PackerVolume
+	}
+
+	if b.config.NetworkXml == "" {
+		b.config.NetworkXml = PackerNetwork
+	}
+
+	if b.config.DomainXml == "" {
+		b.config.DomainXml = PackerQemuXML
+	}
+
 	if b.config.FloppyFiles == nil {
 		b.config.FloppyFiles = make([]string, 0)
 	}
