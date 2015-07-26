@@ -57,7 +57,7 @@ type Config struct {
 	NetworkName string `mapstructure:"network_name"`
 	NetworkXml  string `mapstructure:"network_xml"`
 
-	LibvirtUrl string `mapstructure:"libvirt_urls"`
+	LibvirtUrl string `mapstructure:"libvirt_url"`
 
 	RawBootWait        string `mapstructure:"boot_wait"`
 	RawShutdownTimeout string `mapstructure:"shutdown_timeout"`
