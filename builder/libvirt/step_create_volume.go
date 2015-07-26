@@ -31,7 +31,7 @@ func (s *stepCreateVolume) Run(state multistep.StateBag) multistep.StepAction {
 		return multistep.ActionHalt
 	}
 
-	var volumeXml *bytes.Buffer
+	volumeXml := bytes.NewBuffer(nil)
 	tmpl, err := template.New("volume").Parse(config.VolumeXml)
 	if err != nil {
 		err := fmt.Errorf("Error creating volume: %s", err)
