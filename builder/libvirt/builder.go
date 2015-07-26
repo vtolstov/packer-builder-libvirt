@@ -95,10 +95,6 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, error) {
 		b.config.DiskType = "raw"
 	}
 
-	if b.config.DiskName == "" {
-		b.config.DiskName = b.config.PackerBuildName
-	}
-
 	if b.config.DiskSize == 0 {
 		b.config.DiskSize = 5000
 	}
@@ -162,6 +158,11 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, error) {
 	if b.config.VMName == "" {
 		b.config.VMName = fmt.Sprintf("packer-%s", b.config.PackerBuildName)
 	}
+
+	if b.config.DiskName == "" {
+		b.config.DiskName = b.config.VMName
+	}
+
 	/*
 		// Errors
 		templates := map[string]*string{
