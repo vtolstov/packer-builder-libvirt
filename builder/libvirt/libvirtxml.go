@@ -90,9 +90,6 @@ const PackerQemuXML = `
      </controller>
 
     <interface type='user'>
-<!-- <mac address='{mac}'/> -->
-<!-- <source network='mighost'/> -->
-<!=- <ip address='{ip}'/> -->
      <alias name='net0'/>
             <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
             <rom bar='off'/>
