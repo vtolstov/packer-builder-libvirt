@@ -33,7 +33,7 @@ func (s *stepRun) Run(state multistep.StateBag) multistep.StepAction {
 	}
 	defer lv.CloseConnection()
 	if lvd, err = lv.LookupDomainByName(config.VMName); err != nil {
-		err := fmt.Errorf("Error creating domain: %s", err)
+		err := fmt.Errorf("Error lookup domain: %s", err)
 		state.Put("error", err)
 		ui.Error(err.Error())
 		return multistep.ActionHalt

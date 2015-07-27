@@ -40,7 +40,7 @@ func (s *stepCreateDomain) Run(state multistep.StateBag) multistep.StepAction {
 	domainXml := bytes.NewBuffer(nil)
 	tmpl, err := template.New("domain").Parse(config.DomainXml)
 	if err != nil {
-		err := fmt.Errorf("Error creating domain: %s", err)
+		err := fmt.Errorf("Error creating domain template: %s", err)
 		state.Put("error", err)
 		ui.Error(err.Error())
 		return multistep.ActionHalt
@@ -95,17 +95,17 @@ func (s *stepCreateDomain) Run(state multistep.StateBag) multistep.StepAction {
 	}
 	err = tmpl.Execute(domainXml, data)
 	if err != nil {
-		err := fmt.Errorf("Error creating domain: %s", err)
+		err := fmt.Errorf("Error running domain template: %s", err)
 		state.Put("error", err)
 		ui.Error(err.Error())
 		return multistep.ActionHalt
 	}
 
-	ui.Say(fmt.Sprintf("domain config:\n%s", domainXml.Bytes()))
+	ui.Say(fmt.Sprintf("domain config: %s", string(domainXml.Bytes())))
 
-	lvd, err := lv.DomainCreateXML(string(domainXml.Bytes()), 0)
+	lvd, err := lv.DomainDefineXML(string(domainXml.Bytes()))
 	if err != nil {
-		err := fmt.Errorf("Error creating domain: %s", err)
+		err := fmt.Errorf("Error defining domain: %s", err)
 		state.Put("error", err)
 		ui.Error(err.Error())
 		return multistep.ActionHalt
