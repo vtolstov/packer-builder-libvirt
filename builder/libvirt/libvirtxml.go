@@ -105,7 +105,8 @@ const PackerQemuXML = `
       <alias name='serial0'/>
      </console>
 
-     <input type='mouse' bus='usb'/>
+     <input type='mouse' bus='ps2'/>
+     <input type='keyboard' bus='ps2'/>
 
      <graphics type='vnc' port='-1' autoport='yes'>
        <listen type='address' address='::'/>
