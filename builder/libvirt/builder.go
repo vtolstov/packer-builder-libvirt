@@ -87,6 +87,10 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, error) {
 		return nil, err
 	}
 
+	if b.config.MemorySize < 1 {
+		b.config.MemorySize = "512"
+	}
+
 	if b.config.DomainType == "" {
 		b.config.DomainType = "kvm"
 	}
