@@ -13,6 +13,11 @@ type stepCreateNetwork struct{}
 func (stepCreateNetwork) Run(state multistep.StateBag) multistep.StepAction {
 	config := state.Get("config").(*Config)
 	ui := state.Get("ui").(packer.Ui)
+
+	if config.NetworkType == "user" {
+		return multistep.ActionContinue
+	}
+
 	var lvn libvirt.VirNetwork
 	lv, err := libvirt.NewVirConnection(config.LibvirtUrl)
 	if err != nil {
@@ -47,6 +52,10 @@ func (stepCreateNetwork) Run(state multistep.StateBag) multistep.StepAction {
 func (stepCreateNetwork) Cleanup(state multistep.StateBag) {
 	config := state.Get("config").(*Config)
 	ui := state.Get("ui").(packer.Ui)
+
+	if config.NetworkType == "user" {
+		return
+	}
 
 	lv, err := libvirt.NewVirConnection(config.LibvirtUrl)
 	if err != nil {

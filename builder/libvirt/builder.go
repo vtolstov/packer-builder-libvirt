@@ -56,8 +56,8 @@ type Config struct {
 	PoolXml     string `mapstructure:"pool_xml"`
 	NetworkName string `mapstructure:"network_name"`
 	NetworkXml  string `mapstructure:"network_xml"`
-
-	LibvirtUrl string `mapstructure:"libvirt_url"`
+	NetowrkType string `mapstructure:"network_type"`
+	LibvirtUrl  string `mapstructure:"libvirt_url"`
 
 	RawBootWait        string `mapstructure:"boot_wait"`
 	RawShutdownTimeout string `mapstructure:"shutdown_timeout"`
@@ -115,8 +115,14 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, error) {
 		b.config.VolumeXml = PackerVolume
 	}
 
-	if b.config.NetworkXml == "" {
-		b.config.NetworkXml = PackerNetwork
+	if b.config.NetowrkType == "" {
+		b.config.NetworkType = "user"
+	}
+
+	if b.config.NetworkType != "user" {
+		if b.config.NetworkXml == "" {
+			b.config.NetworkXml = PackerNetwork
+		}
 	}
 
 	if b.config.DomainXml == "" {

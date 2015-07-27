@@ -84,62 +84,47 @@ const PackerQemuXML = `
       <address type='pci' domain='0x0000' bus='0x00' slot='0x01' function='0x2'/>
     </controller>
 
-    <controller type='virtio-serial' index='0'>
-      <alias name='virtio-serial0'/>
-      <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x0'/>
-     </controller>
-
     <interface type='user'>
-     <alias name='net0'/>
-            <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
-            <rom bar='off'/>
-    <model type='virtio'/>
+      <alias name='net0'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+      <rom bar='off'/>
+      <model type='virtio'/>
+    </interface>
 
-<serial type='pty'>
-            <source path='/dev/pts/4'/>
-            <target port='0'/>
-            <alias name='serial0'/>
-          </serial>
+    <serial type='pty'>
+      <source path='/dev/pts/4'/>
+      <target port='0'/>
+      <alias name='serial0'/>
+    </serial>
 
-          <console type='pty' tty='/dev/pts/4'>
-            <source path='/dev/pts/4'/>
-            <target type='serial' port='0'/>
-            <alias name='serial0'/>
-          </console>
+    <console type='pty' tty='/dev/pts/4'>
+      <source path='/dev/pts/4'/>
+      <target type='serial' port='0'/>
+      <alias name='serial0'/>
+     </console>
 
-          <channel type='spicevmc'>
-            <target type='virtio' name='com.redhat.spice.0'/>
-            <alias name='channel0'/>
-            <address type='virtio-serial' controller='0' bus='0' port='1'/>
-          </channel>
+     <input type='mouse' bus='usb'/>
 
-          <channel type='unix'>
-            <source mode='bind' path='/var/lib/libvirt/qemu/{name}.agent'/>
-            <target type='virtio' name='org.mighost.agent.0'/>
-          </channel>
+     <graphics type='vnc' port='-1' autoport='yes'>
+       <listen type='address' address='::'/>
+     </graphics>
 
-          <input type='mouse' bus='usb'/>
+     <video>
+       <model type='vga' vram='9216' heads='1'/>
+       <alias name='video0'/>
+       <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
+     </video>
 
-          <graphics type='vnc' port='-1' autoport='yes'>
-            <listen type='address' address='::'/>
-          </graphics>
+     <memballoon model='virtio'>
+       <alias name='balloon0'/>
+       <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
+       <stats period='30'/>
+     </memballoon>
 
-          <video>
-            <model type='vga' vram='9216' heads='1'/>
-            <alias name='video0'/>
-            <address type='pci' domain='0x0000' bus='0x00' slot='0x02' function='0x0'/>
-          </video>
-
-          <memballoon model='virtio'>
-            <alias name='balloon0'/>
-            <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
-            <stats period='30'/>
-          </memballoon>
-
-          <rng model='virtio'>
-            <rate period="1000" bytes="1024"/>
-            <backend model='random'>/dev/random</backend>
-          </rng>
+     <rng model='virtio'>
+       <rate period="1000" bytes="1024"/>
+       <backend model='random'>/dev/random</backend>
+     </rng>
   </devices>
   <qemu:commandline xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
     <qemu:arg value='-redir'/>
