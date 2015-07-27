@@ -65,5 +65,29 @@ func (s *stepCreateVolume) Run(state multistep.StateBag) multistep.StepAction {
 }
 
 func (s *stepCreateVolume) Cleanup(state multistep.StateBag) {
+	config := state.Get("config").(*Config)
+	ui := state.Get("ui").(packer.Ui)
+	var lvp libvirt.VirStoragePool
+	var lvv libvirt.VirStorageVol
 
+	lv, err := libvirt.NewVirConnection(config.LibvirtUrl)
+	if err != nil {
+		err := fmt.Errorf("Error connecting to libvirt: %s", err)
+		ui.Error(err.Error())
+		return
+	}
+	defer lv.CloseConnection()
+	if lvp, err = lv.LookupStoragePoolByName(config.PoolName); err != nil {
+		err := fmt.Errorf("Error getting pool %s: %s", config.PoolName, err)
+		ui.Error(err.Error())
+		return
+	}
+
+	if lvv, err = lvp.LookupStorageVolByName(config.DiskName); err != nil {
+		err := fmt.Errorf("Error creating volume: %s", err)
+		ui.Error(err.Error())
+		return
+	}
+
+	defer lvv.Delete(0)
 }
