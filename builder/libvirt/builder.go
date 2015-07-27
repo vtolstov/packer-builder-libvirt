@@ -28,27 +28,28 @@ type Builder struct {
 type Config struct {
 	common.PackerConfig `mapstructure:",squash"`
 	Comm                communicator.Config `mapstructure:",squash"`
-	DomainType          string              `mapstructure:"domain_type"`
-	BootCommand         []string            `mapstructure:"boot_command"`
-	MemorySize          uint                `mapstructure:"memory_size"`
-	Arch                string              `mapstructure:"arch"`
-	DiskName            string              `mapstructure:"disk_name"`
-	DiskType            string              `mapstructure:"disk_type"`
-	DiskSize            uint                `mapstructure:"disk_size"`
-	FloppyFiles         []string            `mapstructure:"floppy_files"`
-	HTTPDir             string              `mapstructure:"http_directory"`
-	HTTPPortMin         uint                `mapstructure:"http_port_min"`
-	HTTPPortMax         uint                `mapstructure:"http_port_max"`
-	ISOUrl              string              `mapstructure:"iso_url"`
-	OutputDir           string              `mapstructure:"output_directory"`
-	ShutdownCommand     string              `mapstructure:"shutdown_command"`
-	SSHHostPortMin      uint                `mapstructure:"ssh_host_port_min"`
-	SSHHostPortMax      uint                `mapstructure:"ssh_host_port_max"`
-	SSHKeyPath          string              `mapstructure:"ssh_key_path"`
-	SSHPassword         string              `mapstructure:"ssh_password"`
-	SSHPort             uint                `mapstructure:"ssh_port"`
-	SSHUser             string              `mapstructure:"ssh_username"`
-	VMName              string              `mapstructure:"vm_name"`
+
+	DomainType      string   `mapstructure:"domain_type"`
+	BootCommand     []string `mapstructure:"boot_command"`
+	MemorySize      uint     `mapstructure:"memory_size"`
+	Arch            string   `mapstructure:"arch"`
+	DiskName        string   `mapstructure:"disk_name"`
+	DiskType        string   `mapstructure:"disk_type"`
+	DiskSize        uint     `mapstructure:"disk_size"`
+	FloppyFiles     []string `mapstructure:"floppy_files"`
+	HTTPDir         string   `mapstructure:"http_directory"`
+	HTTPPortMin     uint     `mapstructure:"http_port_min"`
+	HTTPPortMax     uint     `mapstructure:"http_port_max"`
+	ISOUrl          string   `mapstructure:"iso_url"`
+	OutputDir       string   `mapstructure:"output_directory"`
+	ShutdownCommand string   `mapstructure:"shutdown_command"`
+	SSHHostPortMin  uint     `mapstructure:"ssh_host_port_min"`
+	SSHHostPortMax  uint     `mapstructure:"ssh_host_port_max"`
+	SSHKeyPath      string   `mapstructure:"ssh_key_path"`
+	SSHPassword     string   `mapstructure:"ssh_password"`
+	SSHPort         uint     `mapstructure:"ssh_port"`
+	SSHUser         string   `mapstructure:"ssh_username"`
+	VMName          string   `mapstructure:"vm_name"`
 
 	DomainXml   string `mapstructure:"domain_xml"`
 	VolumeXml   string `mapstructure:"volume_xml"`
@@ -85,6 +86,10 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, error) {
 	}, raws...)
 	if err != nil {
 		return nil, err
+	}
+
+	if es := b.config.Comm.Prepare(&b.config.ctx); len(es) > 0 {
+		errs = packer.MultiErrorAppend(errs, es...)
 	}
 
 	if b.config.MemorySize < 1 {
