@@ -158,7 +158,7 @@ func vncSendString(d libvirt.VirDomain, original string) {
 
 		//		time.Sleep(5 * time.Millisecond)
 		//VIR_KEYCODE_SET_LINUX, VIR_KEYCODE_SET_USB, VIR_KEYCODE_SET_RFB, VIR_KEYCODE_SET_WIN32, VIR_KEYCODE_SET_XT_KBD
-		d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 50, []uint{uint(keyCode)}, 0)
+		d.SendKey(libvirt.VIR_KEYCODE_SET_LINUX, 50, []uint{uint(keyCode)}, 0)
 		//		c.KeyEvent(keyCode, true)
 		//		time.Sleep(5 * time.Millisecond)
 		//		c.KeyEvent(keyCode, false)
