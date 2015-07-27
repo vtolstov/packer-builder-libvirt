@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"net"
 	"net/url"
+	"strings"
 
 	"github.com/mitchellh/multistep"
 	"github.com/mitchellh/packer/packer"
@@ -44,7 +45,14 @@ func (s *stepCreateDomain) Run(state multistep.StateBag) multistep.StepAction {
 			ui.Error(err.Error())
 			return multistep.ActionHalt
 		}
-		h, p, err := net.SplitHostPort(u.Host)
+		var h string
+		var p string
+
+		if strings.Index(u.Host, ":") == -1 {
+			h = u.Host
+		} else {
+			h, p, _ = net.SplitHostPort(u.Host)
+		}
 		if p == "" {
 			switch u.Scheme {
 			case "https":
