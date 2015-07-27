@@ -1,14 +1,16 @@
 package libvirt
 
 import (
+	"fmt"
 	"log"
 	"strings"
 	"time"
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/mitchellh/go-vnc"
+	"github.com/alexzorin/libvirt-go"
 	"github.com/mitchellh/multistep"
+	"github.com/mitchellh/packer/packer"
 )
 
 const KeyLeftShift uint32 = 0xFFE1
@@ -31,88 +33,59 @@ type bootCommandTemplateData struct {
 type stepTypeBootCommand struct{}
 
 func (s *stepTypeBootCommand) Run(state multistep.StateBag) multistep.StepAction {
-	/*
-		config := state.Get("config").(*Config)
-		httpPort := state.Get("http_port").(uint)
-		hostIp := state.Get("host_ip").(string)
-		ui := state.Get("ui").(packer.Ui)
+	config := state.Get("config").(*Config)
+	//	httpPort := state.Get("http_port").(uint)
+	//	hostIp := state.Get("host_ip").(string)
+	ui := state.Get("ui").(packer.Ui)
 
-		// Get the VNC IP / Port
-		virshOut, _, err := virsh("vncdisplay", config.VMName)
-		vncAddr := strings.TrimSpace(virshOut)
-		colon := strings.LastIndex(vncAddr, ":")
-		if colon < 0 || colon > len(vncAddr)-2 {
-			err := fmt.Errorf("Error parsing VNC address: %s", vncAddr)
-			state.Put("error", err)
-			ui.Error(err.Error())
+	var lvd libvirt.VirDomain
+	lv, err := libvirt.NewVirConnection(config.LibvirtUrl)
+	if err != nil {
+		err := fmt.Errorf("Error connecting to libvirt: %s", err)
+		state.Put("error", err)
+		ui.Error(err.Error())
+		return multistep.ActionHalt
+	}
+	defer lv.CloseConnection()
+	if lvd, err = lv.LookupDomainByName(config.VMName); err != nil {
+		err := fmt.Errorf("Error lookup domain: %s", err)
+		state.Put("error", err)
+		ui.Error(err.Error())
+		return multistep.ActionHalt
+	}
+	defer lvd.Free()
+
+	//	tplData := &bootCommandTemplateData{
+	//		hostIp,
+	//		httpPort,
+	//		config.VMName,
+	//	}
+
+	ui.Say("Typing the boot command...")
+	for _, command := range config.BootCommand {
+		//		command, err := config.tpl.Process(command, tplData)
+		//		if err != nil {
+		//			err := fmt.Errorf("Error preparing boot command: %s", err)
+		//			state.Put("error", err)
+		//			ui.Error(err.Error())
+		//			return multistep.ActionHalt
+		//		}
+
+		// Check for interrupts between typing things so we can cancel
+		// since this isn't the fastest thing.
+		if _, ok := state.GetOk(multistep.StateCancelled); ok {
 			return multistep.ActionHalt
 		}
-		port, err := strconv.ParseUint(vncAddr[colon+1:], 10, 16)
-		if err != nil {
-			err := fmt.Errorf("Error parsing VNC port: %s", err)
-			state.Put("error", err)
-			ui.Error(err.Error())
-			return multistep.ActionHalt
-		}
-		vncAddr = fmt.Sprintf("%s:%d", vncAddr[:colon], 5900+port)
 
-		log.Printf("VNC Address for VM: %s", vncAddr)
+		vncSendString(lvd, command)
+	}
 
-		// Connect to VNC
-		ui.Say("Connecting to VM via VNC")
-		nc, err := net.Dial("tcp", vncAddr)
-		if err != nil {
-			err := fmt.Errorf("Error connecting to VNC: %s", err)
-			state.Put("error", err)
-			ui.Error(err.Error())
-			return multistep.ActionHalt
-		}
-		defer nc.Close()
-
-		c, err := vnc.Client(nc, &vnc.ClientConfig{Exclusive: true})
-		if err != nil {
-			err := fmt.Errorf("Error handshaking with VNC: %s", err)
-			state.Put("error", err)
-			ui.Error(err.Error())
-			return multistep.ActionHalt
-		}
-		defer c.Close()
-
-		log.Printf("Connected to VNC desktop: %s", c.DesktopName)
-
-		log.Printf("Host IP for the VM: %s", hostIp)
-
-		tplData := &bootCommandTemplateData{
-			hostIp,
-			httpPort,
-			config.VMName,
-		}
-
-		ui.Say("Typing the boot command over VNC...")
-		for _, command := range config.BootCommand {
-			command, err := config.tpl.Process(command, tplData)
-			if err != nil {
-				err := fmt.Errorf("Error preparing boot command: %s", err)
-				state.Put("error", err)
-				ui.Error(err.Error())
-				return multistep.ActionHalt
-			}
-
-			// Check for interrupts between typing things so we can cancel
-			// since this isn't the fastest thing.
-			if _, ok := state.GetOk(multistep.StateCancelled); ok {
-				return multistep.ActionHalt
-			}
-
-			vncSendString(c, command)
-		}
-	*/
 	return multistep.ActionContinue
 }
 
 func (*stepTypeBootCommand) Cleanup(multistep.StateBag) {}
 
-func vncSendString(c *vnc.ClientConn, original string) {
+func vncSendString(d libvirt.VirDomain, original string) {
 	special := make(map[string]uint32)
 	special["<bs>"] = 0xFF08
 	special["<del>"] = 0xFFFF
@@ -179,17 +152,19 @@ func vncSendString(c *vnc.ClientConn, original string) {
 			log.Printf("Sending char '%c', code %d, shift %v", r, keyCode, keyShift)
 		}
 
-		if keyShift {
-			c.KeyEvent(KeyLeftShift, true)
-		}
+		//		if keyShift {
+		//			c.KeyEvent(KeyLeftShift, true)
+		//		}
 
-		time.Sleep(5 * time.Millisecond)
-		c.KeyEvent(keyCode, true)
-		time.Sleep(5 * time.Millisecond)
-		c.KeyEvent(keyCode, false)
+		//		time.Sleep(5 * time.Millisecond)
+		//VIR_KEYCODE_SET_LINUX, VIR_KEYCODE_SET_USB, VIR_KEYCODE_SET_RFB, VIR_KEYCODE_SET_WIN32, VIR_KEYCODE_SET_XT_KBD
+		d.SendKey(libvirt.VIR_KEYCODE_SET_XT_KBD, 50, []uint{uint(keyCode)}, 0)
+		//		c.KeyEvent(keyCode, true)
+		//		time.Sleep(5 * time.Millisecond)
+		//		c.KeyEvent(keyCode, false)
 
-		if keyShift {
-			c.KeyEvent(KeyLeftShift, false)
-		}
+		//		if keyShift {
+		//			c.KeyEvent(KeyLeftShift, false)
+		//		}
 	}
 }
