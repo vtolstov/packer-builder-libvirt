@@ -8,9 +8,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/alexzorin/libvirt-go"
 	"github.com/mitchellh/multistep"
 	"github.com/mitchellh/packer/packer"
+	"gopkg.in/alexzorin/libvirt-go.v2"
 )
 
 const KeyLeftShift uint32 = 0xFFE1
