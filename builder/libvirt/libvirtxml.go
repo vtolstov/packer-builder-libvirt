@@ -2,7 +2,7 @@ package libvirt
 
 const PackerPool = `
 <pool type="dir">
-  <name>packer</name>
+  <name>{{.PoolName}}</name>
   <target>
     <path>/var/lib/libvirt/images</path>
   </target>
@@ -54,9 +54,9 @@ const PackerQemuXML = `
 
   <devices>
   <emulator>/usr/bin/qemu-system-x86_64</emulator>
-    <disk type='file' device='disk'>
-      <driver name='qemu' type='raw' cache='none' io='native' discard='unmap'/>
-      <source dev='/dev/vg/{name}'/>
+    <disk type='volume' device='disk'>
+      <driver name='qemu' type='{{.DiskType}}' cache='none' io='native' discard='unmap'/>
+      <source pool='{{.PoolName}}' volume='{{.DiskName}}'/>
       <alias name='scsi-disk0'/>
       <target dev='sda' bus='scsi'/>
       <boot order='1'/>
@@ -128,7 +128,7 @@ const PackerQemuXML = `
   </devices>
   <qemu:commandline xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
     <qemu:arg value='-redir'/>
-    <qemu:arg value='tcp:%d::22'/>
+    <qemu:arg value='tcp:{{.SSHPort}}::22'/>
   </qemu:commandline>
 </domain>
 `
