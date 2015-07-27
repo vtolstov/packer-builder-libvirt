@@ -38,7 +38,9 @@ const PackerQemuXML = `
   <name>{{.VMName}}</name>
 
   <memory unit='M'>{{.MemorySize}}</memory>
-  <type arch='x86_64' machine='pc-i440fx-1.5'>hvm</type>
+  <os>
+    <type arch='x86_64' machine='pc-i440fx-1.5'>hvm</type>
+  </os>
 
   <features>
     <acpi/>
