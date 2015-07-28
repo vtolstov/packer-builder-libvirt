@@ -137,7 +137,7 @@ func sendBootString(d libvirt.VirDomain, original string) {
 
 		log.Printf("find code for char %s %v", string(r), keys)
 		//VIR_KEYCODE_SET_LINUX, VIR_KEYCODE_SET_USB, VIR_KEYCODE_SET_RFB, VIR_KEYCODE_SET_WIN32, VIR_KEYCODE_SET_XT_KBD
-		if err = d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 50, keys, 0); err != nil {
+		if err = d.SendKey(libvirt.VIR_KEYCODE_SET_LINUX, 50, keys, 0); err != nil {
 			log.Printf("Sending code %d failed: %s", key, err.Error())
 		}
 	}
