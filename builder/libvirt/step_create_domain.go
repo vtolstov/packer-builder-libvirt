@@ -101,7 +101,7 @@ func (s *stepCreateDomain) Run(state multistep.StateBag) multistep.StepAction {
 		return multistep.ActionHalt
 	}
 
-	ui.Say(fmt.Sprintf("domain config: %s", string(domainXml.Bytes())))
+	//	ui.Say(fmt.Sprintf("domain config: %s", string(domainXml.Bytes())))
 
 	lvd, err := lv.DomainDefineXML(string(domainXml.Bytes()))
 	if err != nil {

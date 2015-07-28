@@ -5,8 +5,6 @@ import (
 	"log"
 	"strings"
 	"time"
-	"unicode"
-	"unicode/utf8"
 
 	"github.com/mitchellh/multistep"
 	"github.com/mitchellh/packer/packer"
@@ -77,7 +75,7 @@ func (s *stepTypeBootCommand) Run(state multistep.StateBag) multistep.StepAction
 			return multistep.ActionHalt
 		}
 
-		vncSendString(lvd, command)
+		sendBootString(lvd, command)
 	}
 
 	return multistep.ActionContinue
@@ -85,33 +83,15 @@ func (s *stepTypeBootCommand) Run(state multistep.StateBag) multistep.StepAction
 
 func (*stepTypeBootCommand) Cleanup(multistep.StateBag) {}
 
-func vncSendString(d libvirt.VirDomain, original string) {
-	special := make(map[string]uint32)
-	special["<bs>"] = 0xFF08
-	special["<del>"] = 0xFFFF
-	special["<enter>"] = 0xFF0D
-	special["<esc>"] = 0xFF1B
-	special["<f1>"] = 0xFFBE
-	special["<f2>"] = 0xFFBF
-	special["<f3>"] = 0xFFC0
-	special["<f4>"] = 0xFFC1
-	special["<f5>"] = 0xFFC2
-	special["<f6>"] = 0xFFC3
-	special["<f7>"] = 0xFFC4
-	special["<f8>"] = 0xFFC5
-	special["<f9>"] = 0xFFC6
-	special["<f10>"] = 0xFFC7
-	special["<f11>"] = 0xFFC8
-	special["<f12>"] = 0xFFC9
-	special["<return>"] = 0xFF0D
-	special["<tab>"] = 0xFF09
+func sendBootString(d libvirt.VirDomain, original string) {
+	//	shiftedChars := "~!@#$%^&*()_+{}|:\"<>?"
+	var keys []uint
+	var key uint
+	var ok bool
 
-	shiftedChars := "~!@#$%^&*()_+{}|:\"<>?"
-
-	// TODO(mitchellh): Ripe for optimizations of some point, perhaps.
 	for len(original) > 0 {
-		var keyCode uint32
-		keyShift := false
+		//		var keyCode uint
+		//		keyShift := false
 
 		if strings.HasPrefix(original, "<wait>") {
 			log.Printf("Special code '<wait>' found, sleeping one second")
@@ -134,22 +114,12 @@ func vncSendString(d libvirt.VirDomain, original string) {
 			continue
 		}
 
-		for specialCode, specialValue := range special {
-			if strings.HasPrefix(original, specialCode) {
-				log.Printf("Special code '%s' found, replacing with: %d", specialCode, specialValue)
-				keyCode = specialValue
-				original = original[len(specialCode):]
-				break
+		for _, char := range original {
+			if key, ok = ecodes[string(char)]; ok {
+				keys = append(keys, key)
+				//			keyShift = unicode.IsUpper(r) || strings.ContainsRune(shiftedChars, r)
+				log.Printf("Sending char '%c', code %d", char, key)
 			}
-		}
-
-		if keyCode == 0 {
-			r, size := utf8.DecodeRuneInString(original)
-			original = original[size:]
-			keyCode = uint32(r)
-			keyShift = unicode.IsUpper(r) || strings.ContainsRune(shiftedChars, r)
-
-			log.Printf("Sending char '%c', code %d, shift %v", r, keyCode, keyShift)
 		}
 
 		//		if keyShift {
@@ -158,7 +128,7 @@ func vncSendString(d libvirt.VirDomain, original string) {
 
 		//		time.Sleep(5 * time.Millisecond)
 		//VIR_KEYCODE_SET_LINUX, VIR_KEYCODE_SET_USB, VIR_KEYCODE_SET_RFB, VIR_KEYCODE_SET_WIN32, VIR_KEYCODE_SET_XT_KBD
-		d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 1000, []uint{uint(keyCode)}, 0)
+		d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 1000, keys, 0)
 		//		c.KeyEvent(keyCode, true)
 		//		time.Sleep(5 * time.Millisecond)
 		//		c.KeyEvent(keyCode, false)
