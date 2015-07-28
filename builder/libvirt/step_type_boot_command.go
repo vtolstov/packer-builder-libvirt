@@ -85,10 +85,9 @@ func (*stepTypeBootCommand) Cleanup(multistep.StateBag) {}
 
 func sendBootString(d libvirt.VirDomain, original string) {
 	//	shiftedChars := "~!@#$%^&*()_+{}|:\"<>?"
-	var keys []uint
-	var key uint
-	var ok bool
 	var err error
+	var ok bool
+	var key uint
 
 	for len(original) > 0 {
 		//		var keyCode uint
@@ -116,11 +115,11 @@ func sendBootString(d libvirt.VirDomain, original string) {
 		}
 
 		if strings.HasPrefix(original, "<esc>") {
-			keys = append(keys, ecodes["<esc>"])
+			d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 1000, []uint{ecodes["<esc>"]}, 0)
 			original = original[len("<esc>"):]
 		}
 		if strings.HasPrefix(original, "<enter>") {
-			keys = append(keys, ecodes["<enter>"])
+			d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 1000, []uint{ecodes["<enter>"]}, 0)
 			original = original[len("<enter>"):]
 		}
 
@@ -128,13 +127,13 @@ func sendBootString(d libvirt.VirDomain, original string) {
 		log.Printf("try to find code for char %s", string(char))
 		if key, ok = ecodes[string(char)]; ok {
 			log.Printf("find code for char %s %d", string(char), key)
-			keys = append(keys, key)
 			//			keyShift = unicode.IsUpper(r) || strings.ContainsRune(shiftedChars, r)
+		} else {
+			log.Printf("can't find code for char %s", string(char))
+			continue
 		}
 		original = original[1:]
-	}
-	//VIR_KEYCODE_SET_LINUX, VIR_KEYCODE_SET_USB, VIR_KEYCODE_SET_RFB, VIR_KEYCODE_SET_WIN32, VIR_KEYCODE_SET_XT_KBD
-	for _, key := range keys {
+		//VIR_KEYCODE_SET_LINUX, VIR_KEYCODE_SET_USB, VIR_KEYCODE_SET_RFB, VIR_KEYCODE_SET_WIN32, VIR_KEYCODE_SET_XT_KBD
 		log.Printf("send code %d", key)
 		if err = d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 1000, []uint{key}, 0); err != nil {
 			log.Printf("Sending code %d failed: %s", key, err.Error())
