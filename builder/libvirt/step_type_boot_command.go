@@ -111,13 +111,13 @@ func sendBootString(d libvirt.VirDomain, original string) {
 		}
 
 		if strings.HasPrefix(original, "<esc>") {
-			d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 400, []uint{ecodes["<esc>"]}, 0)
+			d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 300, []uint{ecodes["<esc>"]}, 0)
 			original = original[len("<esc>"):]
 			continue
 		}
 
 		if strings.HasPrefix(original, "<enter>") {
-			d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 400, []uint{ecodes["<enter>"]}, 0)
+			d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 300, []uint{ecodes["<enter>"]}, 0)
 			original = original[len("<enter>"):]
 			continue
 		}
@@ -128,9 +128,10 @@ func sendBootString(d libvirt.VirDomain, original string) {
 		key = ecodes[string(r)]
 		log.Printf("find code for char %s %d", string(r), key)
 		//VIR_KEYCODE_SET_LINUX, VIR_KEYCODE_SET_USB, VIR_KEYCODE_SET_RFB, VIR_KEYCODE_SET_WIN32, VIR_KEYCODE_SET_XT_KBD
-		if err = d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 400, []uint{key}, 0); err != nil {
+		if err = d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 300, []uint{key}, 0); err != nil {
 			log.Printf("Sending code %d failed: %s", key, err.Error())
 		}
+		time.Sleep(100 * time.Millisecond)
 	}
 
 }
