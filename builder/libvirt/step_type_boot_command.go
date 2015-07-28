@@ -131,6 +131,7 @@ func sendBootString(d libvirt.VirDomain, original string) {
 			keys = append(keys, key)
 			//			keyShift = unicode.IsUpper(r) || strings.ContainsRune(shiftedChars, r)
 		}
+		original = original[1:]
 	}
 	//VIR_KEYCODE_SET_LINUX, VIR_KEYCODE_SET_USB, VIR_KEYCODE_SET_RFB, VIR_KEYCODE_SET_WIN32, VIR_KEYCODE_SET_XT_KBD
 	for _, key := range keys {
