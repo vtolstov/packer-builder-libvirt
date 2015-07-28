@@ -437,6 +437,7 @@ var ecodes = map[string]uint{
 	"9":                            KEY_9,
 	"0":                            KEY_0,
 	"-":                            KEY_MINUS,
+	"_":                            KEY_MINUS,
 	"=":                            KEY_EQUAL,
 	"<bs>":                         KEY_BACKSPACE,
 	"<backspace>":                  KEY_BACKSPACE,

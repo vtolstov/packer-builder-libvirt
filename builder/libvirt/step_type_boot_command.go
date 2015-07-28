@@ -89,7 +89,7 @@ func sendBootString(d libvirt.VirDomain, original string) {
 	var err error
 	var key uint
 
-	//	shiftedChars := "~!@#$%^&*()_+{}|:\"<>?"
+	shiftedChars := "~!@#$%^&*()_+{}|:\"<>?"
 
 	for len(original) > 0 {
 		time.Sleep(50 * time.Millisecond)
@@ -130,10 +130,10 @@ func sendBootString(d libvirt.VirDomain, original string) {
 		r, size := utf8.DecodeRuneInString(original)
 		original = original[size:]
 		var keys []uint
-		if unicode.IsUpper(r) {
+		if unicode.IsUpper(r) || strings.ContainsRune(shiftedChars, r) {
 			keys = append(keys, ecodes["<lshift>"])
 		}
-		keys = append(keys, ecodes[string(r)])
+		keys = append(keys, ecodes[string(unicode.ToLower(r))])
 
 		log.Printf("find code for char %s %d", string(r), key)
 		//VIR_KEYCODE_SET_LINUX, VIR_KEYCODE_SET_USB, VIR_KEYCODE_SET_RFB, VIR_KEYCODE_SET_WIN32, VIR_KEYCODE_SET_XT_KBD
