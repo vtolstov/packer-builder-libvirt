@@ -114,6 +114,17 @@ func sendBootString(d libvirt.VirDomain, original string) {
 			continue
 		}
 
+		if strings.HasPrefix(original, "<esc>") {
+			keys = append(keys, ecodes["<esc>"])
+			original = original[len("<esc>"):]
+			continue
+		}
+		if strings.HasPrefix(original, "<enter>") {
+			keys = append(keys, ecodes["<enter>"])
+			original = original[len("<enter>"):]
+			continue
+		}
+
 		for _, char := range original {
 			if key, ok = ecodes[string(char)]; ok {
 				keys = append(keys, key)
