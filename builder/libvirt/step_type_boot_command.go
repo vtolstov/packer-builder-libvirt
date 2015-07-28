@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/mitchellh/multistep"
 	"github.com/mitchellh/packer/packer"
@@ -115,27 +116,21 @@ func sendBootString(d libvirt.VirDomain, original string) {
 		}
 
 		if strings.HasPrefix(original, "<esc>") {
-			d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 500, []uint{ecodes["<esc>"]}, 0)
+			d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 400, []uint{ecodes["<esc>"]}, 0)
 			original = original[len("<esc>"):]
 		}
 		if strings.HasPrefix(original, "<enter>") {
-			d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 500, []uint{ecodes["<enter>"]}, 0)
+			d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 400, []uint{ecodes["<enter>"]}, 0)
 			original = original[len("<enter>"):]
 		}
 
-		char := original[0]
-		log.Printf("try to find code for char %s", string(char))
-		if key, ok = ecodes[string(char)]; ok {
-			log.Printf("find code for char %s %d", string(char), key)
-			//			keyShift = unicode.IsUpper(r) || strings.ContainsRune(shiftedChars, r)
-		} else {
-			log.Printf("can't find code for char %s", string(char))
-			continue
-		}
-		original = original[1:]
+		r, size := utf8.DecodeRuneInString(original)
+		original = original[size:]
+		key = ecodes[string(r)]
+		log.Printf("find code for char %s %d", string(r), key)
 		//VIR_KEYCODE_SET_LINUX, VIR_KEYCODE_SET_USB, VIR_KEYCODE_SET_RFB, VIR_KEYCODE_SET_WIN32, VIR_KEYCODE_SET_XT_KBD
 		log.Printf("send code %d", key)
-		if err = d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 500, []uint{key}, 0); err != nil {
+		if err = d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 400, []uint{key}, 0); err != nil {
 			log.Printf("Sending code %d failed: %s", key, err.Error())
 		}
 	}
