@@ -87,7 +87,6 @@ func (*stepTypeBootCommand) Cleanup(multistep.StateBag) {}
 func sendBootString(d libvirt.VirDomain, original string) {
 	//	shiftedChars := "~!@#$%^&*()_+{}|:\"<>?"
 	var err error
-	var ok bool
 	var key uint
 
 	for len(original) > 0 {
