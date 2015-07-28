@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/mitchellh/multistep"
@@ -88,6 +89,8 @@ func sendBootString(d libvirt.VirDomain, original string) {
 	var err error
 	var key uint
 
+	//	shiftedChars := "~!@#$%^&*()_+{}|:\"<>?"
+
 	for len(original) > 0 {
 		time.Sleep(50 * time.Millisecond)
 		if strings.HasPrefix(original, "<wait>") {
@@ -126,10 +129,15 @@ func sendBootString(d libvirt.VirDomain, original string) {
 		log.Printf("command %s", original)
 		r, size := utf8.DecodeRuneInString(original)
 		original = original[size:]
-		key = ecodes[string(r)]
+		var keys []uint
+		if unicode.IsUpper(r) {
+			keys = append(keys, ecodes["<lshift>"])
+		}
+		keys = append(keys, ecodes[string(r)])
+
 		log.Printf("find code for char %s %d", string(r), key)
 		//VIR_KEYCODE_SET_LINUX, VIR_KEYCODE_SET_USB, VIR_KEYCODE_SET_RFB, VIR_KEYCODE_SET_WIN32, VIR_KEYCODE_SET_XT_KBD
-		if err = d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 50, []uint{key}, 0); err != nil {
+		if err = d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 50, keys, 0); err != nil {
 			log.Printf("Sending code %d failed: %s", key, err.Error())
 		}
 	}
