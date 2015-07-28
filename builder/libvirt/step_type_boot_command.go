@@ -125,14 +125,16 @@ func sendBootString(d libvirt.VirDomain, original string) {
 		}
 
 		char := original[0]
+		log.Printf("try to find code for char %s", string(char))
 		if key, ok = ecodes[string(char)]; ok {
+			log.Printf("find code for char %s %d", string(char), key)
 			keys = append(keys, key)
 			//			keyShift = unicode.IsUpper(r) || strings.ContainsRune(shiftedChars, r)
 		}
 	}
 	//VIR_KEYCODE_SET_LINUX, VIR_KEYCODE_SET_USB, VIR_KEYCODE_SET_RFB, VIR_KEYCODE_SET_WIN32, VIR_KEYCODE_SET_XT_KBD
 	for _, key := range keys {
-		log.Printf("Sending code %d", key)
+		log.Printf("send code %d", key)
 		if err = d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 1000, []uint{key}, 0); err != nil {
 			log.Printf("Sending code %d failed: %s", key, err.Error())
 		}
