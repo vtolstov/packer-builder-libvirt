@@ -85,14 +85,10 @@ func (s *stepTypeBootCommand) Run(state multistep.StateBag) multistep.StepAction
 func (*stepTypeBootCommand) Cleanup(multistep.StateBag) {}
 
 func sendBootString(d libvirt.VirDomain, original string) {
-	//	shiftedChars := "~!@#$%^&*()_+{}|:\"<>?"
 	var err error
 	var key uint
 
 	for len(original) > 0 {
-		//		var keyCode uint
-		//		keyShift := false
-
 		if strings.HasPrefix(original, "<wait>") {
 			log.Printf("Special code '<wait>' found, sleeping one second")
 			time.Sleep(1 * time.Second)
@@ -118,17 +114,18 @@ func sendBootString(d libvirt.VirDomain, original string) {
 			d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 400, []uint{ecodes["<esc>"]}, 0)
 			original = original[len("<esc>"):]
 		}
+
 		if strings.HasPrefix(original, "<enter>") {
 			d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 400, []uint{ecodes["<enter>"]}, 0)
 			original = original[len("<enter>"):]
 		}
 
+		log.Printf("command %s", original)
 		r, size := utf8.DecodeRuneInString(original)
 		original = original[size:]
 		key = ecodes[string(r)]
 		log.Printf("find code for char %s %d", string(r), key)
 		//VIR_KEYCODE_SET_LINUX, VIR_KEYCODE_SET_USB, VIR_KEYCODE_SET_RFB, VIR_KEYCODE_SET_WIN32, VIR_KEYCODE_SET_XT_KBD
-		log.Printf("send code %d", key)
 		if err = d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 400, []uint{key}, 0); err != nil {
 			log.Printf("Sending code %d failed: %s", key, err.Error())
 		}
