@@ -118,27 +118,24 @@ func sendBootString(d libvirt.VirDomain, original string) {
 		if strings.HasPrefix(original, "<esc>") {
 			keys = append(keys, ecodes["<esc>"])
 			original = original[len("<esc>"):]
-			continue
 		}
 		if strings.HasPrefix(original, "<enter>") {
 			keys = append(keys, ecodes["<enter>"])
 			original = original[len("<enter>"):]
-			continue
 		}
 
-		for _, char := range original {
-			if key, ok = ecodes[string(char)]; ok {
-				keys = append(keys, key)
-				//			keyShift = unicode.IsUpper(r) || strings.ContainsRune(shiftedChars, r)
-			}
-		}
-
-		//VIR_KEYCODE_SET_LINUX, VIR_KEYCODE_SET_USB, VIR_KEYCODE_SET_RFB, VIR_KEYCODE_SET_WIN32, VIR_KEYCODE_SET_XT_KBD
-		for _, key := range keys {
-			log.Printf("Sending code %d", key)
-			if err = d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 1000, []uint{key}, 0); err != nil {
-				log.Printf("Sending code %d failed: %s", key, err.Error())
-			}
+		char := original[0]
+		if key, ok = ecodes[string(char)]; ok {
+			keys = append(keys, key)
+			//			keyShift = unicode.IsUpper(r) || strings.ContainsRune(shiftedChars, r)
 		}
 	}
+	//VIR_KEYCODE_SET_LINUX, VIR_KEYCODE_SET_USB, VIR_KEYCODE_SET_RFB, VIR_KEYCODE_SET_WIN32, VIR_KEYCODE_SET_XT_KBD
+	for _, key := range keys {
+		log.Printf("Sending code %d", key)
+		if err = d.SendKey(libvirt.VIR_KEYCODE_SET_RFB, 1000, []uint{key}, 0); err != nil {
+			log.Printf("Sending code %d failed: %s", key, err.Error())
+		}
+	}
+
 }
