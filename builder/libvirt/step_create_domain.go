@@ -10,7 +10,7 @@ import (
 
 	"github.com/mitchellh/multistep"
 	"github.com/mitchellh/packer/packer"
-	"gopkg.in/alexzorin/libvirt-go.v2"
+	"github.com/vtolstov/libvirt-go"
 )
 
 type stepCreateDomain struct{}

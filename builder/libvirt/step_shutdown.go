@@ -8,7 +8,7 @@ import (
 
 	"github.com/mitchellh/multistep"
 	"github.com/mitchellh/packer/packer"
-	"gopkg.in/alexzorin/libvirt-go.v2"
+	"github.com/vtolstov/libvirt-go"
 )
 
 // This step shuts down the machine. It first attempts to do so gracefully,
