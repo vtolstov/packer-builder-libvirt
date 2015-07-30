@@ -18,6 +18,7 @@ type stepCreateDomain struct{}
 func (s *stepCreateDomain) Run(state multistep.StateBag) multistep.StepAction {
 	config := state.Get("config").(*Config)
 	ui := state.Get("ui").(packer.Ui)
+	sshHostPort := state.Get("sshHostPort").(uint)
 
 	lv, err := libvirt.NewVirConnection(config.LibvirtUrl)
 	if err != nil {
@@ -71,16 +72,17 @@ func (s *stepCreateDomain) Run(state multistep.StateBag) multistep.StepAction {
 	}
 
 	data := struct {
-		VMName      string
-		DiskName    string
-		DiskType    string
-		PoolName    string
-		MemorySize  uint
-		ISOUrlProto string
-		ISOUrlPath  string
-		ISOUrlHost  string
-		ISOUrlPort  string
-		SSHPort     string
+		VMName       string
+		DiskName     string
+		DiskType     string
+		PoolName     string
+		MemorySize   uint
+		ISOUrlProto  string
+		ISOUrlPath   string
+		ISOUrlHost   string
+		ISOUrlPort   string
+		SSHHostPort  string
+		SSHGuestport string
 	}{
 		config.VMName,
 		config.DiskName,
@@ -91,7 +93,8 @@ func (s *stepCreateDomain) Run(state multistep.StateBag) multistep.StepAction {
 		u.Path,
 		h,
 		p,
-		"2022",
+		sshHostPort,
+		config.Comm.Port(),
 	}
 	err = tmpl.Execute(domainXml, data)
 	if err != nil {

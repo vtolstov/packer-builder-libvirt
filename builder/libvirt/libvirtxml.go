@@ -128,10 +128,14 @@ const PackerQemuXML = `
        <rate period="1000" bytes="1024"/>
        <backend model='random'>/dev/random</backend>
      </rng>
+
   </devices>
+
+  {{if .NetworkUser}}
   <qemu:commandline xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
     <qemu:arg value='-redir'/>
     <qemu:arg value='tcp:{{.SSHPort}}::22'/>
   </qemu:commandline>
+  {{end}}
 </domain>
 `

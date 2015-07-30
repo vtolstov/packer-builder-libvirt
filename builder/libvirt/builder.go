@@ -29,7 +29,6 @@ type Config struct {
 	common.PackerConfig `mapstructure:",squash"`
 	Comm                communicator.Config `mapstructure:",squash"`
 
-	DomainType      string   `mapstructure:"domain_type"`
 	BootCommand     []string `mapstructure:"boot_command"`
 	MemorySize      uint     `mapstructure:"memory_size"`
 	Arch            string   `mapstructure:"arch"`
@@ -52,6 +51,7 @@ type Config struct {
 	VMName          string   `mapstructure:"vm_name"`
 
 	DomainXml   string `mapstructure:"domain_xml"`
+	DomainType  string `mapstructure:"domain_type"`
 	VolumeXml   string `mapstructure:"volume_xml"`
 	PoolName    string `mapstructure:"pool_name"`
 	PoolXml     string `mapstructure:"pool_xml"`
@@ -97,7 +97,7 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, error) {
 	}
 
 	if b.config.DomainType == "" {
-		b.config.DomainType = "kvm"
+		b.config.DomainType = "qemu"
 	}
 
 	if b.config.DiskType == "" {
@@ -128,14 +128,18 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, error) {
 		b.config.NetworkType = "user"
 	}
 
-	if b.config.NetworkType != "user" {
-		if b.config.NetworkXml == "" {
+	if b.config.NetworkXml == "" {
+		switch b.config.NetworkType {
+		case "nat":
 			b.config.NetworkXml = PackerNetwork
 		}
 	}
 
 	if b.config.DomainXml == "" {
-		b.config.DomainXml = PackerQemuXML
+		switch b.config.DomainType {
+		case "qemu":
+			b.config.DomainXml = PackerQemuXML
+		}
 	}
 
 	if b.config.FloppyFiles == nil {
@@ -178,27 +182,6 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, error) {
 		b.config.DiskName = b.config.VMName
 	}
 
-	/*
-		// Errors
-		templates := map[string]*string{
-			"disk_name":        &b.config.DiskName,
-			"http_directory":   &b.config.HTTPDir,
-			"output_directory": &b.config.OutputDir,
-			"shutdown_command": &b.config.ShutdownCommand,
-			"ssh_password":     &b.config.SSHPassword,
-			"ssh_username":     &b.config.SSHUser,
-			"vm_name":          &b.config.VMName,
-			"boot_wait":        &b.config.RawBootWait,
-			"shutdown_timeout": &b.config.RawShutdownTimeout,
-			"ssh_wait_timeout": &b.config.RawSSHWaitTimeout,
-			"domain_xml":       &b.config.DomainXml,
-			"volume_xml":       &b.config.VolumeXml,
-			"pool_name":        &b.config.PoolName,
-			"pool_xml":         &b.config.PoolXml,
-			"network_name":     &b.config.NetworkName,
-			"network_xml":      &b.config.NetworkXml,
-		}
-	*/
 	b.config.ISOUrl, err = common.DownloadableURL(b.config.ISOUrl)
 	if err != nil {
 		errs = packer.MultiErrorAppend(
@@ -365,7 +348,7 @@ func (b *Builder) Run(ui packer.Ui, hook packer.Hook, cache packer.Cache) (packe
 
 	artifact.state["diskType"] = b.config.DiskType
 	artifact.state["diskSize"] = b.config.DiskSize
-	artifact.state["domainType"] = "kvm"
+	artifact.state["domainType"] = b.config.DomainType
 
 	return artifact, nil
 }
