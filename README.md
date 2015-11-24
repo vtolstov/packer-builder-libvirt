@@ -17,5 +17,11 @@ GOBIN="some path where you install packer binary" go get -u github.com/vtolstov/
   }
 }
 ```
-* export PACKER_CONFIG="directory with .packerconfig file"
-* run packer build
+* run
+```
+export PACKER_CONFIG="directory with .packerconfig file"
+```
+* run
+```
+packer build
+```
